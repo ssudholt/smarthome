@@ -61,6 +61,36 @@ This attribute defines supported functions that can be set for an item. Full set
 <pre>
 [enigma2]
     [[vusolo4k]]
+        [[[e2lanmac]]]
+            type = str
+            enigma2_data_type = e2lanmac
+            enigma2_page = about
+            device_id = vusolo4k
+            visu_acl = ro
+        [[[e2landhcp]]]
+            type = str
+            enigma2_data_type = e2landhcp
+            enigma2_page = about
+            device_id = vusolo4k
+            visu_acl = ro
+        [[[e2langw]]]
+            type = str
+            enigma2_data_type = e2langw
+            enigma2_page = about
+            device_id = vusolo4k
+            visu_acl = ro
+        [[[e2lanmask]]]
+            type = str
+            enigma2_data_type = e2lanmask
+            enigma2_page = about
+            device_id = vusolo4k
+            visu_acl = ro
+        [[[e2lanip]]]
+            type = str
+            enigma2_data_type = e2lanip
+            enigma2_page = about
+            device_id = vusolo4k
+            visu_acl = ro
         [[[e2enigmaversion]]]
             type = str
             enigma2_data_type = e2enigmaversion
@@ -93,11 +123,11 @@ This attribute defines supported functions that can be set for an item. Full set
             visu_acl = ro
         [[[e2videoheight]]]
             type = num
-            enigma2_data_type = e2videowidth
+            enigma2_data_type = e2videoheight
             enigma2_page = about
             device_id = vusolo4k
             visu_acl = ro
-        [[[e2videoheight]]]
+        [[[e2apid]]]
             type = num
             enigma2_data_type = e2apid
             enigma2_page = about
@@ -288,7 +318,13 @@ This attribute defines supported functions that can be set for an item. Full set
 
 # Functions
 
-## send_message(self, messagetext, messagetype=1, timeout=10)
+## get_audio_tracks()
+This function returns an array of dicts with the following keys: "e2audiotrackdescription" (string), "e2audiotrackid" (int), "e2audiotrackpid" (int), "e2audiotrackactive" (bool)
+<pre>
+sh.vusolo4k.get_audio_tracks()
+</pre>
+
+## send_message(messagetext, messagetype=1, timeout=10)
 Sets a message to the device
 messagetype: Number from 0 to 3, 0= Yes/No, 1= Info, 2=Message, 3=Attention
 timeout: Number of seconds the message should stay on the device, default: 10
