@@ -1086,11 +1086,12 @@ class AVM():
                         else:
                             self.logger.error("Attribute %s not available on the FritzDevice" % item.conf['avm_data_type'])
                     elif child.conf['avm_data_type'] == 'device_hostname':
-                        device_hostname = xml.getElementsByTagName('NewHostName')
-                        if (len(device_hostname) > 0):
-                            child(device_hostname[0].firstChild.data)
+                        data = self._get_value_from_xml_node(xml, 'NewHostName')
+                        if not data is None:
+                            child(data)
                         else:
-                            self.logger.error("Attribute %s not available on the FritzDevice" % item.conf['avm_data_type'])
+                            self.logger.error(
+                                "Attribute %s not available on the FritzDevice" % item.conf['avm_data_type'])
         else:
             item(0)
             self.logger.debug("MAC Address not available on the FritzDevice - ID: %s" % self._fritz_device.get_identifier())
@@ -1527,38 +1528,41 @@ class AVM():
             return
 
         if item.conf['avm_data_type'] in ['wan_connection_status','wan_is_connected']:
-            element_xml = xml.getElementsByTagName('NewConnectionStatus')
-            if (len(element_xml) > 0):                
+            data = self._get_value_from_xml_node(xml, 'NewConnectionStatus')
+            if (not data is None):
                 if item.conf['avm_data_type'] == 'wan_connection_status':
-                    if not element_xml[0].firstChild is None:
-                        item(element_xml[0].firstChild.data)
+                    item(data)
                 elif item.conf['avm_data_type'] == 'wan_is_connected':
-                    if not element_xml[0].firstChild is None:
-                        if element_xml[0].firstChild.data == 'Connected':
-                            item(True)
-                        else:
-                            item(False)
-            else: 
+                    if data == 'Connected':
+                        item(True)
+                    else:
+                        item(False)
+            else:
                 self.logger.error("Attribute %s not available on the FritzDevice" % item.conf['avm_data_type'])
         elif item.conf['avm_data_type'] == 'wan_uptime':
-            element_xml = xml.getElementsByTagName('NewUptime')
-            if (len(element_xml) > 0):
-                if not element_xml[0].firstChild is None:
-                    item(int(element_xml[0].firstChild.data))
-            else: 
+            data = self._get_value_from_xml_node(xml, 'NewUptime')
+            if (not data is None):
+                item(int(data))
+            else:
                 self.logger.error("Attribute %s not available on the FritzDevice" % item.conf['avm_data_type'])
         elif item.conf['avm_data_type'] == 'wan_connection_error':
-            element_xml = xml.getElementsByTagName('NewLastConnectionError')
-            if (len(element_xml) > 0):
-                if not element_xml[0].firstChild is None:
-                    item(element_xml[0].firstChild.data)
-            else: 
+            data = self._get_value_from_xml_node(xml, 'NewLastConnectionError')
+            if (not data is None):
+                item(data)
+            else:
                 self.logger.error("Attribute %s not available on the FritzDevice" % item.conf['avm_data_type'])
-                
         elif item.conf['avm_data_type'] == 'wan_ip':
-            element_xml = xml.getElementsByTagName('NewExternalIPAddress')
-            if (len(element_xml) > 0):
-                if not element_xml[0].firstChild is None:
-                    item(element_xml[0].firstChild.data)
-            else: 
+            data = self._get_value_from_xml_node(xml, 'NewExternalIPAddress')
+            if (not data is None):
+                item(data)
+            else:
                 self.logger.error("Attribute %s not available on the FritzDevice" % item.conf['avm_data_type'])
+
+
+    def _get_value_from_xml_node(self, node, tag_name):
+        data = None
+        xml = node.getElementsByTagName(tag_name)
+        if (len(xml) > 0):
+            if not xml[0].firstChild is None:
+                data = xml[0].firstChild.data
+        return data

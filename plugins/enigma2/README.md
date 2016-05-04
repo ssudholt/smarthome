@@ -8,7 +8,10 @@ sudo pip3 install requests --upgrade
 
 It is completely based on the openwebif interface for Enigma2 devices
 
-Version 0.1 tested with a VUSolo2 and a VUSolo4k with newest VTI Image
+Forum thread to the plugin: https://knx-user-forum.de/forum/supportforen/smarthome-py/943871-enigma2-plugin
+
+Version 0.1 tested with a VUSolo2 and a VUSolo4k with newest VTI Image.
+It is currently also tested with a Dreambox 8000 and Dreambox 7020hd.
 The version is pre alpha and continously under development.
 
 # Configuration
@@ -19,7 +22,7 @@ The version is pre alpha and continously under development.
     class_name = Enigma2
     class_path = plugins.enigma2
     host = xxx.xxx.xxx.xxx
-    port = 81
+    port = 81 # 81 for "vu"-boxes, it may be port 80 for a dreambox
     cycle = 240
     ssl = False    # use https or not
     verify = False # verify ssl certificate
@@ -28,7 +31,7 @@ The version is pre alpha and continously under development.
     class_name = Enigma2
     class_path = plugins.enigma2
     host = xxx.xxx.xxx.xxx
-    port = 81
+    port = 81 # 81 for "vu"-boxes, it may be port 80 for a dreambox
     cycle = 240
     ssl = False    # use https or not
     verify = False # verify ssl certificate
@@ -116,13 +119,13 @@ This attribute defines supported functions that can be set for an item. Full set
             device_id = vusolo4k
             visu_acl = ro
         [[[e2videowidth]]]
-            type = num
+            type = str
             enigma2_data_type = e2videowidth
             enigma2_page = about
             device_id = vusolo4k
             visu_acl = ro
         [[[e2videoheight]]]
-            type = num
+            type = str
             enigma2_data_type = e2videoheight
             enigma2_page = about
             device_id = vusolo4k
@@ -148,6 +151,11 @@ This attribute defines supported functions that can be set for an item. Full set
             [[[[eventdescription]]]] # more complex logic behind that data type
                 type = str
                 enigma2_data_type = current_eventdescription
+                device_id = vusolo4k
+                visu_acl = ro
+            [[[[e2eventdescriptionextended]]]] # more complex logic behind that data type
+                type = str
+                enigma2_data_type = current_eventdescriptionextended
                 device_id = vusolo4k
                 visu_acl = ro
             [[[[e2servicename]]]]
