@@ -10,7 +10,7 @@ It is completely based on the openwebif interface for Enigma2 devices
 
 Forum thread to the plugin: https://knx-user-forum.de/forum/supportforen/smarthome-py/943871-enigma2-plugin
 
-Version 0.1 tested with a VUSolo2 and a VUSolo4k with newest VTI Image.
+Version 0.12 tested with a VUSolo2 and a VUSolo4k with newest VTI Image.
 It is currently also tested with a Dreambox 8000 and Dreambox 7020hd.
 The version is pre alpha and continously under development.
 
@@ -24,7 +24,7 @@ The version is pre alpha and continously under development.
     host = xxx.xxx.xxx.xxx
     port = 81 # 81 for "vu"-boxes, it may be port 80 for a dreambox
     cycle = 240
-    fast_cycle = 10
+    fast_cycle = 30
     ssl = False    # use https or not
     verify = False # verify ssl certificate
     device_id = vusolo4k
@@ -34,7 +34,7 @@ The version is pre alpha and continously under development.
     host = xxx.xxx.xxx.xxx
     port = 81 # 81 for "vu"-boxes, it may be port 80 for a dreambox
     cycle = 240
-    fast_cycle = 10
+    fast_cycle = 30
     ssl = False    # use https or not
     verify = False # verify ssl certificate
     device_id = vusolo2
@@ -167,6 +167,36 @@ This attribute defines supported functions that can be set for an item. Full set
                 device_id = vusolo4k
                 visu_acl = ro
         [[[remote]]] # see http://dream.reichholf.net/wiki/Enigma2:WebInterface#RemoteControl
+            [[[[PAUSE]]]]
+                type = bool
+                visu_acl = rw
+                enigma2_remote_command_id = 119
+                device_id = vusolo4k
+                enforce_updates = true
+            [[[[STOP]]]]
+                type = bool
+                visu_acl = rw
+                enigma2_remote_command_id = 128
+                device_id = vusolo4k
+                enforce_updates = true
+            [[[[PLAY]]]]
+                type = bool
+                visu_acl = rw
+                enigma2_remote_command_id = 207
+                device_id = vusolo4k
+                enforce_updates = true
+            [[[[FF]]]]
+                type = bool
+                visu_acl = rw
+                enigma2_remote_command_id = 208
+                device_id = vusolo4k
+                enforce_updates = true
+            [[[[REWIND]]]]
+                type = bool
+                visu_acl = rw
+                enigma2_remote_command_id = 168
+                device_id = vusolo4k
+                enforce_updates = true
             [[[[POWER]]]]
                 type = bool
                 visu_acl = rw
