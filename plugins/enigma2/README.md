@@ -10,7 +10,7 @@ It is completely based on the openwebif interface for Enigma2 devices
 
 Forum thread to the plugin: https://knx-user-forum.de/forum/supportforen/smarthome-py/943871-enigma2-plugin
 
-Version 0.12 tested with a VUSolo2 and a VUSolo4k with newest VTI Image.
+Version 1.1.3 tested with a VUSolo2 and a VUSolo4k with newest VTI Image.
 It is currently also tested with a Dreambox 8000 and Dreambox 7020hd.
 The version is pre alpha and continously under development.
 
@@ -66,6 +66,18 @@ This attribute defines supported functions that can be set for an item. Full set
 <pre>
 [enigma2]
     [[vusolo4k]]
+        [[[e2ip]]]
+            type = str
+            enigma2_data_type = e2ip
+            enigma2_page = deviceinfo
+            device_id = vusolo4k
+            visu_acl = ro
+        [[[e2mac]]]
+            type = str
+            enigma2_data_type = e2mac
+            enigma2_page = deviceinfo
+            device_id = vusolo4k
+            visu_acl = ro
         [[[e2lanmac]]]
             type = str
             enigma2_data_type = e2lanmac
@@ -75,7 +87,7 @@ This attribute defines supported functions that can be set for an item. Full set
         [[[e2landhcp]]]
             type = str
             enigma2_data_type = e2landhcp
-            enigma2_page = about
+            enigma2_page = deviceinfo
             device_id = vusolo4k
             visu_acl = ro
         [[[e2langw]]]
@@ -138,6 +150,12 @@ This attribute defines supported functions that can be set for an item. Full set
             enigma2_page = about
             device_id = vusolo4k
             visu_acl = ro
+        [[[e2vpid]]]
+            type = num
+            enigma2_data_type = e2vpid
+            enigma2_page = about
+            device_id = vusolo4k
+            visu_acl = ro
         [[[e2instandby]]]
             type = bool
             enigma2_data_type = e2instandby
@@ -155,17 +173,35 @@ This attribute defines supported functions that can be set for an item. Full set
                 enigma2_data_type = current_eventdescription
                 device_id = vusolo4k
                 visu_acl = ro
-            [[[[e2eventdescriptionextended]]]] # more complex logic behind that data type
+            [[[[eventdescriptionextended]]]] # more complex logic behind that data type
                 type = str
                 enigma2_data_type = current_eventdescriptionextended
                 device_id = vusolo4k
                 visu_acl = ro
-            [[[[e2servicename]]]]
+            [[[[currentvolume]]]] # more complex logic behind that data type
+                type = num
+                enigma2_data_type = current_volume
+                device_id = vusolo4k
+                visu_acl = rw
+            [[[[servicename]]]]
                 type = str
                 enigma2_data_type = e2servicename
                 enigma2_page = subservices
                 device_id = vusolo4k
                 visu_acl = ro
+        [[[services]]]
+            [[[[DasErste_HD]]]]
+                type = bool
+                sref = 1:0:19:283D:3FB:1:C00000:0:0:0:  # could be different on other boxes, open /web/getservices in browser and follow URL with sref=<serviceid>
+                device_id = vusolo4k
+                enforce_updates = true
+                visu_acl = rw
+            [[[[ZDF_HD]]]]
+                type = bool
+                sref = 1:0:19:2B66:3F3:1:C00000:0:0:0:  # could be different on other boxes, open /web/getservices in browser and follow URL with sref=<serviceid>
+                device_id = vusolo4k
+                enforce_updates = true
+                visu_acl = rw
         [[[remote]]] # see http://dream.reichholf.net/wiki/Enigma2:WebInterface#RemoteControl
             [[[[PAUSE]]]]
                 type = bool

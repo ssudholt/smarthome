@@ -2,7 +2,7 @@
 #
 #########################################################################
 #  Copyright 2016 René Frieß                        rene.friess@gmail.com
-#  Version 0.12
+#  Version 1.1.3
 #########################################################################
 #  Free for non-commercial use
 #
@@ -129,18 +129,22 @@ class Enigma2():
 
     _url_suffix_map = dict([('about','/web/about'),
                             ('deviceinfo', '/web/deviceinfo'),
-                            ('powerstate', '/web/powerstate'),
-                            ('subservices', '/web/subservices'),
-                            ('remotecontrol','/web/remotecontrol'),
+                            ('epgservice', '/web/epgservice'),
+                            ('getaudiotracks', '/web/getaudiotracks'),
+                            ('getcurrent', '/web/getcurrent'),
                             ('message', '/web/message'),
                             ('messageanswer','/web/messageanswer'),
-                            ('getaudiotracks', '/web/getaudiotracks'),
-                            ('epgservice', '/web/epgservice')])
+                            ('powerstate', '/web/powerstate'),
+                            ('remotecontrol', '/web/remotecontrol'),
+                            ('subservices', '/web/subservices'),
+                            ('zap', '/web/zap')])
 
-    _keys_fast_refresh = ['current_eventtitle','current_eventdescription','current_eventdescriptionextended','e2servicename','e2videoheight','e2videowidth']
+    _keys_fast_refresh = ['current_eventtitle','current_eventdescription','current_eventdescriptionextended',
+                          'current_volume', 'e2servicename','e2videoheight','e2videowidth','e2apid','e2vpid',
+                          'e2instandby']
     _key_event_information = ['current_eventtitle','current_eventdescription','current_eventdescriptionextended']
 
-    def __init__(self, smarthome, username='', password='', host='fritz.box', port='49443', ssl='True', verify='False', cycle=300, fast_cycle=10, device_id='enigma2'):
+    def __init__(self, smarthome, username='', password='', host='dreambox', port='80', ssl='True', verify='False', cycle=300, fast_cycle=10, device_id='enigma2'):
         """
         Initalizes the plugin. The parameters describe for this method are pulled from the entry in plugin.conf.
 
@@ -222,7 +226,7 @@ class Enigma2():
         #empty response cache
         self._response_cache = dict()
 
-    def _update_loop_fast(self):
+    def _update_loop_fast(self, cache=True):
         """
         Starts the fast update loop for all known items.
         """
@@ -233,14 +237,17 @@ class Enigma2():
             if 'enigma2_page' in item.conf:
                 self._update(item)
             elif item.conf['enigma2_data_type'] in self._key_event_information:
-                self._update_event_items(cache=False)
+                self._update_event_items(cache)
+            elif item.conf['enigma2_data_type'] == 'current_volume':
+                self._update_volume(item, cache)
 
         # empty response cache
         self._response_cache = dict()
 
     def parse_item(self, item):
         """
-        Default plugin parse_item method. Is called when the plugin is initialized. Selects each item corresponding to the Enigma2 device id and adds it to an internal array
+        Default plugin parse_item method. Is called when the plugin is initialized. Selects each item corresponding to
+        the Enigma2 device id and adds it to an internal array
 
         :param item: The item to process.
         """
@@ -250,7 +257,7 @@ class Enigma2():
             if value == self._enigma2_device.get_identifier():
                 # normal items
                 if 'enigma2_page' in item.conf:
-                    if item.conf['enigma2_page'] in ['about', 'powerstate', 'subservices']:
+                    if item.conf['enigma2_page'] in ['about', 'powerstate', 'subservices', 'deviceinfo']:
                         if item.conf['enigma2_data_type'] in self._keys_fast_refresh:
                             self._enigma2_device._items_fast.append(item)
                         else:
@@ -260,38 +267,48 @@ class Enigma2():
                         self._enigma2_device._items_fast.append(item)
                     else:
                         self._enigma2_device._items.append(item)
-                elif 'enigma2_remote_command_id' in item.conf:                                    # items for TV remote
+                elif 'enigma2_remote_command_id' in item.conf or 'sref' in item.conf:    # items for TV remote and direct service access
                     return self.execute_item
 
     def execute_item(self, item, caller=None, source=None, dest=None):
         """
-        | Write items values - in case they were changed from somewhere else than the Enigma2 plugin (=the Enigma2Device) to the Enigma2Device.
+        | Write items values - in case they were changed from somewhere else than the Enigma2 plugin
+        | (=the Enigma2Device) to the Enigma2Device.
 
         :param item: item to be updated towards the Enigma2Device
         """
         if caller != 'Enigma2':
             # enigma2 remote control
             if 'enigma2_remote_command_id' in item.conf:
-                
-                url = self._build_url(self._url_suffix_map['remotecontrol'],'command=%s' % item.conf['enigma2_remote_command_id'])
-                try:
-                    response = self._session.get(url, timeout=self._timeout, auth=HTTPDigestAuth(self._enigma2_device.get_user(),
-                                                                  self._enigma2_device.get_password()), verify=self._verify)
-                except Exception as e:
-                    self.logger.error("Exception when sending GET request: %s" % str(e))
-                    return
-                
-                xml = minidom.parseString(response.content)
-                e2result_xml = xml.getElementsByTagName('e2result')
-                e2resulttext_xml = xml.getElementsByTagName('e2resulttext')
-                if (len(e2resulttext_xml) > 0 and len(e2result_xml) >0):
-                    if not e2resulttext_xml[0].firstChild is None and not e2result_xml[0].firstChild is None:
-                        if e2result_xml[0].firstChild.data == 'True':
-                            self.logger.debug(e2resulttext_xml[0].firstChild.data)
-
+                self.remote_control_command(item.conf['enigma2_remote_command_id'])
                 if item.conf['enigma2_remote_command_id'] in ['105','106','116']: #box was switched to or from standby, auto update
-                    self._update_event_items()
-                    self._update_loop_fast()
+                    self._update_event_items(cache = False)
+                    self._update_loop_fast(cache = False)
+                elif item.conf['enigma2_remote_command_id'] in ['114','115']: #volume changed, auto update
+                    self._update_loop_fast(cache = False)
+            elif 'sref' in item.conf:
+                self.zap(item.conf['sref'])
+                self._update_event_items(cache = False)
+                self._update_loop_fast(cache = False)
+
+    def remote_control_command(self, command_id):
+        url = self._build_url(self._url_suffix_map['remotecontrol'],
+                              'command=%s' % command_id)
+        try:
+            response = self._session.get(url, timeout=self._timeout,
+                                         auth=HTTPDigestAuth(self._enigma2_device.get_user(),
+                                                             self._enigma2_device.get_password()), verify=self._verify)
+        except Exception as e:
+            self.logger.error("Exception when sending GET request: %s" % str(e))
+            return
+
+        xml = minidom.parseString(response.content)
+        e2result_xml = xml.getElementsByTagName('e2result')
+        e2resulttext_xml = xml.getElementsByTagName('e2resulttext')
+        if (len(e2resulttext_xml) > 0 and len(e2result_xml) > 0):
+            if not e2resulttext_xml[0].firstChild is None and not e2result_xml[0].firstChild is None:
+                if e2result_xml[0].firstChild.data == 'True':
+                    self.logger.debug(e2resulttext_xml[0].firstChild.data)
 
     def get_audio_tracks(self):
         """
@@ -335,6 +352,31 @@ class Enigma2():
                 result.append(result_entry)
 
         return result
+
+    def zap(self, e2servicereference, title=''):
+        """
+        Zaps to another service by a given e2servicereference
+
+        :param e2servicereference: reference to the service
+        :param title: optional title of "zap" action
+        """
+        url = self._build_url(self._url_suffix_map['zap'],
+                              'sRef=%s&title=%s' % (e2servicereference, title))
+        try:
+            response = self._session.get(url, timeout=self._timeout,
+                                         auth=HTTPDigestAuth(self._enigma2_device.get_user(),
+                                                             self._enigma2_device.get_password()), verify=self._verify)
+        except Exception as e:
+            self.logger.error("Exception when sending GET request: %s" % str(e))
+            return
+
+        xml = minidom.parseString(response.content)
+        e2state_xml = xml.getElementsByTagName('e2state')
+        e2statetext_xml = xml.getElementsByTagName('e2statetext')
+        if (len(e2statetext_xml) > 0 and len(e2state_xml) > 0):
+            if not e2statetext_xml[0].firstChild is None and not e2state_xml[0].firstChild is None:
+                if e2state_xml[0].firstChild.data == 'True':
+                    self.logger.debug(e2statetext_xml[0].firstChild.data)
 
     def send_message(self, messagetext, messagetype=1, timeout=10):
         """
@@ -384,6 +426,31 @@ class Enigma2():
     def _update_event_items(self, cache = True):
         for item in self._enigma2_device.get_fast_items():
             if item.conf['enigma2_data_type'] in ['current_eventtitle', 'current_eventdescription','current_eventdescriptionextended','e2servicename']:
+                self._update_current_event(item, cache)
+
+    def _update_volume(self, item, cache = True):
+        """
+        Retrieves the answer to a currently sent message, take care to take the timeout into account in which the answer can be given and start a thread which is polling the answer for that period.
+        """
+        url = self._build_url(self._url_suffix_map['getcurrent'])
+        self.logger.debug("Getting Volume")
+        try:
+            response = self._session.get(url, timeout=self._timeout,
+                                         auth=HTTPDigestAuth(self._enigma2_device.get_user(),
+                                                             self._enigma2_device.get_password()), verify=self._verify)
+            xml = minidom.parseString(response.content)
+        except Exception as e:
+            self.logger.error("Exception when sending GET request: %s" % str(e))
+            return
+
+        volume = self._get_value_from_xml_node(xml, 'e2current')
+        self.logger.debug("Volume "+volume)
+        item(volume)
+
+    def _update_event_items(self, cache=True):
+        for item in self._enigma2_device.get_fast_items():
+            if item.conf['enigma2_data_type'] in ['current_eventtitle', 'current_eventdescription',
+                                                  'current_eventdescriptionextended', 'e2servicename']:
                 self._update_current_event(item, cache)
 
     def _update_current_event(self, item, cache = True):

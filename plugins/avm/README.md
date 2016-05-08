@@ -10,11 +10,16 @@ It is completely based on the TR-064 interface from AVM (http://avm.de/service/s
 
 Forum thread to the plugin: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
-Version 0.964 tested with a FRITZ!Box 7490 (FRITZ!OS 06.51), a FRITZ! WLAN Repeater 1750E (FRITZ!OS 06.32) and a
-WLAN Repeater 300E (FRITZ!OS 06.30). It was also tested with a FRITZ!Box 7390 with FW 84.06.36.
+Version 1.1.1 tested with a FRITZ!Box 7490 (FRITZ!OS 06.51), a FRITZ! WLAN Repeater 1750E (FRITZ!OS 06.32) and a
+WLAN Repeater 300E (FRITZ!OS 06.30). It was also tested with a FRITZ!Box 7390 with FW 84.06.36 and a Fritz!Box 7390
+with v6.30 und v6.51.
 
-The MonitoringService currently does not support parallel incoming or outgoing calls. For being able to connect to
-the FritzDevice's CallMonitor, you have to activate it, by typing `#96*5*` on a directly connected phone.
+The avm_data_types listed in the example items under "devices" only work correctly with firmware <= v6.30, if the
+FRITZ!Box does not handle more than 16 devices in parallel (under "Heimnetz/Netzwerk"). Otherwise some of the devices
+won't work.
+
+The MonitoringService currently does not support multiple parallel incoming or outgoing calls. For being able to
+connect to the FritzDevice's CallMonitor, you have to activate it, by typing `#96*5*` on a directly connected phone.
 
 # Configuration
 
@@ -124,12 +129,14 @@ This attribute defines supported functions that can be set for an item. Full set
             avm_data_type = monitor_trigger
             avm_incoming_allowed = ...
             avm_target_number = ...
+            enforce_updates = yes
         [[[trigger2]]]
             type = bool
             avm_identifier = fritzbox_1
             avm_data_type = monitor_trigger
             avm_incoming_allowed = ...
             avm_target_number = ...
+            enforce_updates = yes
 	    [[[incoming]]]
             [[[[is_call_incoming]]]]
                 type = bool
