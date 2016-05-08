@@ -2,7 +2,7 @@
 #
 #########################################################################
 #  Copyright 2016 René Frieß                        rene.friess@gmail.com
-#  Version 1.1.3
+#  Version 1.1.4
 #########################################################################
 #  Free for non-commercial use
 #
@@ -549,6 +549,7 @@ class Enigma2():
         Updates information on diverse items
 
         :param item: item to be updated
+        :param cache: cache for request true or false
         """
 
         if not 'enigma2_data_type' in item.conf:
@@ -565,7 +566,13 @@ class Enigma2():
             self.logger.error("Exception when parsing response: %s" % str(e))
             return
 
-        element_xml = xml.getElementsByTagName(item.conf['enigma2_data_type'])
+        if "/" in item.conf['enigma2_data_type']:
+            strings = item.conf['enigma2_data_type'].split('/')
+            parent_element_xml = xml.getElementsByTagName(strings[0])
+            element_xml = parent_element_xml[0].getElementsByTagName(strings[1])
+        else:
+            element_xml = xml.getElementsByTagName(item.conf['enigma2_data_type'])
+
         if (len(element_xml) > 0):
             # self.logger.debug(element_xml[0].firstChild.data)
             if item.type() == 'bool':
@@ -580,6 +587,9 @@ class Enigma2():
                         item(int(element_xml[0].firstChild.data))
                     elif (self._represents_float(element_xml[0].firstChild.data)):
                         item(float(element_xml[0].firstChild.data))
+                    elif item.conf['enigma2_data_type'] in ['e2capacity', 'e2free']:
+                        #self.logger.debug(element_xml[0].firstChild.data)
+                        item(int(''.join(filter(lambda x: x.isdigit(), element_xml[0].firstChild.data))))  # remove "GB" String and convert to int
                 # todo: evtl alten item wert clearen?
             else:
                 if not element_xml[0].firstChild is None:
@@ -591,6 +601,8 @@ class Enigma2():
                     item("-")
         else:
             self.logger.error("Attribute %s not available on the Enigma2Device" % item.conf['enigma2_data_type'])
+
+    #helper functions below
 
     def _cached_get_request(self, cache_key, url, cache=True):
         if not cache_key in self._response_cache or not cache:
