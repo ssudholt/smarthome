@@ -57,6 +57,8 @@
 	"installierte Version": "installierte Version",
 	"Neuste Version": "Neuste Version",
 	"Keine Antwort von PyPI": "Keine Antwort von PyPI",
+	"PyPI nicht erreichbar": "PyPI nicht erreichbar",
+	"PyPI Prüfung deaktiviert": "PyPI Prüfung deaktiviert",
 	"Dienst": "Dienst",
 	"Status": "Status",
 	"Aktion": "Aktion",

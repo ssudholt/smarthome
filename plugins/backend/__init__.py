@@ -57,7 +57,7 @@ class BackendServer(SmartPlugin):
         s.connect(("10.10.10.10", 80))
         return s.getsockname()[0]
 
-    def __init__(self, sh, port=None, threads=8, ip='', updates_allowed='True', user="admin", password="", language="", developer_mode="no"):
+    def __init__(self, sh, port=None, threads=8, ip='', updates_allowed='True', user="admin", password="", language="", developer_mode="no", pypi_timeout=5):
         self.logger = logging.getLogger(__name__)
         self._user = user
         self._password = password
@@ -96,6 +96,13 @@ class BackendServer(SmartPlugin):
 
         self.updates_allowed = self.my_to_bool(updates_allowed, 'updates_allowed', True)
 
+        if self.is_int(pypi_timeout):
+            self.pypi_timeout = int(pypi_timeout)
+        else:
+            self.pypi_timeout = 5
+            if pypi_timeout is not None:
+                self.logger.error("BackendServer: Invalid value '" + str(pypi_timeout) + "' configured for attribute 'pypi_timeout' in plugin.conf, using '" + str(self.pypi_timeout) + "' instead")
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.logger.debug("BackendServer running from '{}'".format(current_dir))
 
@@ -123,7 +130,7 @@ class BackendServer(SmartPlugin):
         }
         self._cherrypy = cherrypy
         self._cherrypy.config.update(config)
-        self._cherrypy.tree.mount(Backend(self, self.updates_allowed, language, self.developer_mode), '/', config = config)
+        self._cherrypy.tree.mount(Backend(self, self.updates_allowed, language, self.developer_mode, self.pypi_timeout), '/', config = config)
 
     def run(self):
         self.logger.debug("BackendServer: rest run")
@@ -236,13 +243,14 @@ class Backend:
     env.globals['is_userlogic'] = is_userlogic
     env.globals['_'] = translate
     
-    def __init__(self, backendserver=None, updates_allowed=True, language='', developer_mode=False):
+    def __init__(self, backendserver=None, updates_allowed=True, language='', developer_mode=False, pypi_timeout = 5):
         self.logger = logging.getLogger(__name__)
         self._bs = backendserver
         self._sh = backendserver._sh
         self.language = language
         self.updates_allowed = updates_allowed
         self.developer_mode = developer_mode
+        self.pypi_timeout = pypi_timeout
 
         self._sh_dir = self._sh.base_dir
         self.visu_plugin = None
@@ -355,6 +363,23 @@ class Backend:
         returns a list with the installed python packages and its versions
         """
         self.find_visu_plugin()
+        
+        # check if pypi service is reachable
+        if self.pypi_timeout <= 0:
+            pypi_available = False
+            pypi_unavailable_message = translate('PyPI Prüfung deaktiviert')
+        else:
+            pypi_available = True
+            try:
+                import socket
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(self.pypi_timeout)
+                sock.connect(('pypi.python.org',443))
+                sock.close()
+            except:
+                pypi_available = False
+                pypi_unavailable_message = translate('PyPI nicht erreichbar')
+        
         import pip
         import xmlrpc
         installed_packages = pip.get_installed_distributions()
@@ -364,14 +389,17 @@ class Backend:
             package = {}
             package['key'] = dist.key
             package['version_installed'] = dist.version
-            try:
-                available = pypi.package_releases(dist.project_name)
+            if pypi_available:
                 try:
-                    package['version_available'] = available[0]
+                    available = pypi.package_releases(dist.project_name)
+                    try:
+                        package['version_available'] = available[0]
+                    except:
+                        package['version_available'] = '-'
                 except:
-                    package['version_available'] = '-'
-            except:
-                package['version_available'] = [translate('Keine Antwort von PyPI')]
+                    package['version_available'] = [translate('Keine Antwort von PyPI')]
+            else:
+                package['version_available'] = pypi_unavailable_message
             packages.append(package)
 
         sorted_packages = sorted([(i['key'], i['version_installed'], i['version_available']) for i in packages])
@@ -444,13 +472,20 @@ class Backend:
         start = (int(page)-1) * 1000
         end = start + 1000
         counter = 0
+        log_level_hit = False
         total_counter = 0
         for line in fobj:
             line_text = self.html_escape(line)
-            if text_filter in line_text and (
-                    log_level_filter == "ALL" or line_text.find(log_level_filter) in [19, 20, 21, 22, 23]):
+            if log_level_filter != "ALL" and not self.validate_date(line_text[0:10]) and log_level_hit:
                 if start <= counter < end:
                     log_lines.append(line_text)
+                counter += 1
+            else:
+                log_level_hit = False
+            if (log_level_filter == "ALL" or line_text.find(log_level_filter) in [19, 20, 21, 22, 23]) and text_filter in line_text:
+                if start <= counter < end:
+                    log_lines.append(line_text)
+                    log_level_hit = True
                 counter += 1
         fobj.close()
         num_pages = -(-counter // 1000)
@@ -850,6 +885,13 @@ class Backend:
                                 stdout, stdout=subprocess.PIPE)
         print(rbt2.communicate()[0])
         return redirect('/services.html')
+
+    def validate_date(self, date_text):
+        try:
+            datetime.datetime.strptime(date_text, '%Y-%m-%d')
+            return True
+        except ValueError:
+            return False
 
 #if __name__ == "__main__":
 #    server = BackendServer( None, port=8080, ip='0.0.0.0')
