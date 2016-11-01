@@ -27,7 +27,7 @@ import lib.connection
 logger = logging.getLogger('')
 
 
-class XBMC():
+class Kodi():
 
     def __init__(self, smarthome):
         self._sh = smarthome
@@ -46,22 +46,22 @@ class XBMC():
             box.notify(title, message, image)
 
     def parse_item(self, item):
-        if 'xbmc_host' in item.conf:
-            self._boxes.append(xbmc(self._sh, item))
+        if 'kodi_host' in item.conf:
+            self._boxes.append(kodi(self._sh, item))
 
 
-class xbmc(lib.connection.Client):
+class kodi(lib.connection.Client):
 
     _notification_time = 10000
     _listen_keys = ['volume', 'mute', 'title', 'media', 'state']
     _send_keys = {'volume': 'Application.SetVolume', 'mute': 'Application.SetMute'}
 
     def __init__(self, smarthome, item):
-        if 'xbmc_port' in item.conf:
-            port = int(item.conf['xbmc_port'])
+        if 'kodi_port' in item.conf:
+            port = int(item.conf['kodi_port'])
         else:
             port = 9090
-        host = item.conf['xbmc_host']
+        host = item.conf['kodi_host']
         lib.connection.Client.__init__(self, host, port, monitor=True)
         self.terminator = 0
         self.balance(b'{', b'}')
@@ -72,12 +72,12 @@ class xbmc(lib.connection.Client):
         self._reply_lock = threading.Condition()
         self._reply = None
         self._items = {'state': item}
-        for child in self._sh.find_children(item, 'xbmc_listen'):
-            listen_to = child.conf['xbmc_listen']
+        for child in self._sh.find_children(item, 'kodi_listen'):
+            listen_to = child.conf['kodi_listen']
             if listen_to in self._listen_keys:
                 self._items[listen_to] = child
-        for child in self._sh.find_children(item, 'xbmc_send'):
-            send_to = child.conf['xbmc_send']
+        for child in self._sh.find_children(item, 'kodi_send'):
+            send_to = child.conf['kodi_send']
             if send_to in self._send_keys:
                 child.add_method_trigger(self._send_value)
         item.notify = self.notify
@@ -89,8 +89,8 @@ class xbmc(lib.connection.Client):
             self._send('GUI.ShowNotification', {'title': title, 'message': message, 'image': image, 'displaytime': self._notification_time})
 
     def _send_value(self, item, caller=None, source=None, dest=None):
-        if caller != 'XBMC':
-            self._send(self._send_keys[item.conf['xbmc_send']], {item.conf['xbmc_send']: item()}, wait=False)
+        if caller != 'Kodi':
+            self._send(self._send_keys[item.conf['kodi_send']], {item.conf['kodi_send']: item()}, wait=False)
 
     def run(self):
         self.alive = True
@@ -109,7 +109,7 @@ class xbmc(lib.connection.Client):
         else:
             data = {"jsonrpc": "2.0", "id": id, "method": method}
         self._reply_lock.acquire()
-        #logger.debug("XBMC sending: {0}".format(json.dumps(data, separators=(',', ':'))))
+        #logger.debug("Kodi sending: {0}".format(json.dumps(data, separators=(',', ':'))))
         self.send((json.dumps(data, separators=(',', ':')) + '\r\n').encode())
         if wait:
             self._reply_lock.wait(2)
@@ -121,11 +121,11 @@ class xbmc(lib.connection.Client):
 
     def _set_item(self, key, value):
         if key in self._items:
-            self._items[key](value, 'XBMC')
+            self._items[key](value, 'Kodi')
 
     def found_balance(self, data):
         event = json.loads(data.decode())
-        #logger.debug("XBMC receiving: {0}".format(event))
+        #logger.debug("Kodi receiving: {0}".format(event))
         if 'id' in event:
             if event['id'] == self._rid:
                 self._rid = None
@@ -137,17 +137,17 @@ class xbmc(lib.connection.Client):
         if 'method' in event:
             if event['method'] == 'Player.OnPause':
                 if 'state' in self._items:
-                    self._items['state']('Pause', 'XBMC')
+                    self._items['state']('Pause', 'Kodi')
             elif event['method'] == 'Player.OnStop':
                 if 'state' in self._items:
-                    self._items['state']('Menu', 'XBMC')
+                    self._items['state']('Menu', 'Kodi')
                 if 'media' in self._items:
-                    self._items['media']('', 'XBMC')
+                    self._items['media']('', 'Kodi')
                 if 'title' in self._items:
-                    self._items['title']('', 'XBMC')
+                    self._items['title']('', 'Kodi')
             if event['method'] in ['Player.OnPlay']:
                 # use a different thread for event handling
-                self._sh.trigger('xbmc-event', self._parse_event, 'XBMC', value={'event': event})
+                self._sh.trigger('kodi-event', self._parse_event, 'Kodi', value={'event': event})
             elif event['method'] in ['Application.OnVolumeChanged']:
                 if 'mute' in self._items:
                     self._set_item('mute', event['params']['data']['muted'])
@@ -158,11 +158,11 @@ class xbmc(lib.connection.Client):
         if event['method'] == 'Player.OnPlay':
             result = self._send('Player.GetActivePlayers')['result']
             if len(result) == 0:
-                logger.info("XBMC: no active player found.")
+                logger.info("Kodi: no active player found.")
                 return
             playerid = result[0]['playerid']
             typ = result[0]['type']
-            self._items['state']('Playing', 'XBMC')
+            self._items['state']('Playing', 'Kodi')
             if typ == 'video':
                 result = self._send('Player.GetItem', {"properties": ["title"], "playerid": playerid}, "VideoGetItem")['result']
                 title = result['item']['title']
@@ -170,10 +170,10 @@ class xbmc(lib.connection.Client):
                     title = result['item']['label']
                 if 'media' in self._items:
                     typ = result['item']['type']
-                    self._items['media'](typ.capitalize(), 'XBMC')
+                    self._items['media'](typ.capitalize(), 'Kodi')
             elif typ == 'audio':
                 if 'media' in self._items:
-                    self._items['media'](typ.capitalize(), 'XBMC')
+                    self._items['media'](typ.capitalize(), 'Kodi')
                 result = self._send('Player.GetItem', {"properties": ["title", "artist"], "playerid": playerid}, "AudioGetItem")['result']
                 if len(result['item']['artist']) == 0:
                     artist = 'unknown'
@@ -182,10 +182,10 @@ class xbmc(lib.connection.Client):
                 title = artist + ' - ' + result['item']['title']
             elif typ == 'picture':
                 if 'media' in self._items:
-                    self._items['media'](typ.capitalize(), 'XBMC')
+                    self._items['media'](typ.capitalize(), 'Kodi')
                 title = ''
             else:
-                logger.warning("XBMC: Unknown type: {0}".format(typ))
+                logger.warning("Kodi: Unknown type: {0}".format(typ))
                 return
             if 'title' in self._items:
-                self._items['title'](title, 'XBMC')
+                self._items['title'](title, 'Kodi')
