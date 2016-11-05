@@ -54,7 +54,9 @@ class kodi(lib.connection.Client):
 
     _notification_time = 10000
     _listen_keys = ['volume', 'mute', 'title', 'media', 'state']
-    _send_keys = {'volume': 'Application.SetVolume', 'mute': 'Application.SetMute'}
+    _send_keys = {'volume': 'Application.SetVolume', 'mute': 'Application.SetMute',
+                  'left': 'Input.Left', 'right': 'Input.Right', 'up': 'Input.Up', 'down': 'Input.Down',
+                  'home': 'Input.Home', 'back': 'Input.Back', 'select': 'Input.Select'}
 
     def __init__(self, smarthome, item):
         if 'kodi_port' in item.conf:
@@ -90,7 +92,11 @@ class kodi(lib.connection.Client):
 
     def _send_value(self, item, caller=None, source=None, dest=None):
         if caller != 'Kodi':
-            self._send(self._send_keys[item.conf['kodi_send']], {item.conf['kodi_send']: item()}, wait=False)
+            if 'kodi_params' not in item.conf or item.conf['kodi_params'] == 'None':
+                params = None
+            else:
+                params = item.conf['kodi_params']
+            self._send(self._send_keys[item.conf['kodi_send']], params, wait=False)
 
     def run(self):
         self.alive = True
@@ -145,6 +151,9 @@ class kodi(lib.connection.Client):
                     self._items['media']('', 'Kodi')
                 if 'title' in self._items:
                     self._items['title']('', 'Kodi')
+            elif event['method'] == 'GUI.OnScreensaverActivated':
+                if 'state' in self._items:
+                    self._items['state']('Screensaver', 'Kodi')
             if event['method'] in ['Player.OnPlay']:
                 # use a different thread for event handling
                 self._sh.trigger('kodi-event', self._parse_event, 'Kodi', value={'event': event})
@@ -153,6 +162,7 @@ class kodi(lib.connection.Client):
                     self._set_item('mute', event['params']['data']['muted'])
                 if 'volume' in self._items:
                     self._set_item('volume', event['params']['data']['volume'])
+            
 
     def _parse_event(self, event):
         if event['method'] == 'Player.OnPlay':
